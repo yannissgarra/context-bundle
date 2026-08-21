@@ -1,0 +1,9 @@
+framework:
+    secret: test
+    handle_all_throwables: true
+    http_method_override: false
+    test: true
+    annotations: false
+
+    php_errors:
+        log: true

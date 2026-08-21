@@ -1,0 +1,16 @@
+###> base ###
+.DS_Store
+/.php-cs-fixer.cache
+/composer.cache
+/composer.lock
+###< base ###
+
+###> phpunit/phpunit ###
+/.phpunit.cache
+/phpunit.xml
+/tests/Fixture/var/
+###< phpunit/phpunit ###
+
+###> symfony/framework-bundle ###
+/vendor/
+###< symfony/framework-bundle ###
