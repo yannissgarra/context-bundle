@@ -45,6 +45,27 @@ final class ContextResponseListenerTest extends TestCase
         $this->assertNotNull($cookie);
         $this->assertSame('profile_context', $cookie->getName());
         $this->assertSame('profile-token', $cookie->getValue());
+        $this->assertFalse($cookie->isSecure());
+    }
+
+    public function testOnKernelResponseOverHttpsShouldSetSecureCookie(): void
+    {
+        $request = new Request(server: ['HTTPS' => 'on']);
+        $request->attributes->set('context.profile', ['hash' => 'cached']);
+        $request->attributes->set('context.profile.refresh', true);
+
+        $response = new Response();
+
+        $tokenEncoder = $this->createMock(TokenEncoderInterface::class);
+        $tokenEncoder->method('encode')->willReturn('profile-token');
+
+        $listener = new ContextResponseListener($tokenEncoder, self::TTL);
+        $listener->onKernelResponse(new ResponseEvent($this->createMock(HttpKernelInterface::class), $request, HttpKernelInterface::MAIN_REQUEST, $response));
+
+        $cookie = $response->headers->getCookies()[0] ?? null;
+
+        $this->assertNotNull($cookie);
+        $this->assertTrue($cookie->isSecure());
     }
 
     public function testOnKernelResponseUsesConfiguredTtlShouldSucceed(): void

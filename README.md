@@ -97,7 +97,7 @@ Two `kernel.event_listener`s do the actual cookie I/O so the rest of the request
 
 - `ContextRequestListener` (`kernel.request`) reads every cookie named `{reference}_context`, verifies and decodes its JWT via `TokenEncoderInterface`, and copies the resulting array payload into the `context.{reference}` request attribute. A cookie that fails to decode — malformed, expired, or signed with a different secret — is silently ignored, exactly as if it had never been set.
 - `ContextProvider::get()` lazily denormalizes that attribute (a plain array, via Symfony's `NormalizerInterface`/`DenormalizerInterface`) into the requested context class; `update()` normalizes the context back to an array and flags `context.{reference}.refresh` as `true` only when the hash actually changed (write-on-change).
-- `ContextResponseListener` (`kernel.response`, main request only) looks for `context.{reference}.refresh === true` and, when found, encodes the array payload via `TokenEncoderInterface` and writes the result as the `{reference}_context` cookie (`HttpOnly`, `SameSite=Lax`, expiring after the configured `ttl`).
+- `ContextResponseListener` (`kernel.response`, main request only) looks for `context.{reference}.refresh === true` and, when found, encodes the array payload via `TokenEncoderInterface` and writes the result as the `{reference}_context` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when the request itself is HTTPS, expiring after the configured `ttl`).
 
 ### Cookie signing
 

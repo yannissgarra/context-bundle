@@ -51,6 +51,7 @@ final class ContextResponseListener
                             ->withValue($this->tokenEncoder->encode($context))
                             ->withExpires(new \DateTimeImmutable('+'.$this->ttl))
                             ->withHttpOnly(true)
+                            ->withSecure($request->isSecure())
                             ->withSameSite(Cookie::SAMESITE_LAX),
                     );
                 }
