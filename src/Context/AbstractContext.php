@@ -18,7 +18,7 @@ use Symfony\Component\String\UnicodeString;
  */
 abstract class AbstractContext implements ContextInterface
 {
-    final public static function getReference(string $separator = '-'): string
+    final public static function getReference(): string
     {
         $shortName = (new \ReflectionClass(static::class))->getShortName();
 
@@ -26,6 +26,6 @@ abstract class AbstractContext implements ContextInterface
             $shortName = substr($shortName, 0, -strlen('Context'));
         }
 
-        return (new UnicodeString($shortName))->snake()->replace('_', $separator)->toString();
+        return (new UnicodeString($shortName))->kebab()->toString();
     }
 }

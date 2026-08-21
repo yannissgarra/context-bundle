@@ -23,11 +23,6 @@ final class AbstractContextTest extends TestCase
         $this->assertSame('foo-bar', FooBarContext::getReference());
     }
 
-    public function testGetReferenceWithCustomSeparatorShouldSucceed(): void
-    {
-        $this->assertSame('foo_bar', FooBarContext::getReference('_'));
-    }
-
     public function testGetReferenceWithoutContextSuffixeShouldSucceed(): void
     {
         $this->assertSame('foo-bar', FooBar::getReference());
