@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Webmunkeez\ContextBundle\Context;
 
+use Symfony\Component\Serializer\Attribute\Ignore;
 use Symfony\Component\String\UnicodeString;
 
 /**
@@ -18,6 +19,7 @@ use Symfony\Component\String\UnicodeString;
  */
 abstract class AbstractContext implements ContextInterface
 {
+    #[Ignore]
     final public static function getReference(): string
     {
         $shortName = (new \ReflectionClass(static::class))->getShortName();
