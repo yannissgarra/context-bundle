@@ -26,6 +26,10 @@ final class ContextRequestListener
 
     public function onKernelRequest(RequestEvent $event): void
     {
+        if (false === $event->isMainRequest()) {
+            return;
+        }
+
         $request = $event->getRequest();
 
         foreach ($request->cookies->all() as $name => $value) {

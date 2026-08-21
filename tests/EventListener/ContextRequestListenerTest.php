@@ -81,4 +81,17 @@ final class ContextRequestListenerTest extends TestCase
 
         $this->assertSame([], $request->attributes->all());
     }
+
+    public function testOnKernelRequestOnSubRequestShouldFail(): void
+    {
+        $request = new Request(cookies: ['profile_context' => 'profile-token']);
+
+        $tokenEncoder = $this->createMock(TokenEncoderInterface::class);
+        $tokenEncoder->expects($this->never())->method('decode');
+
+        $listener = new ContextRequestListener($tokenEncoder);
+        $listener->onKernelRequest(new RequestEvent($this->createMock(HttpKernelInterface::class), $request, HttpKernelInterface::SUB_REQUEST));
+
+        $this->assertSame([], $request->attributes->all());
+    }
 }
