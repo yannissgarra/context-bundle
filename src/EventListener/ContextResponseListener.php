@@ -13,12 +13,19 @@ namespace Webmunkeez\ContextBundle\EventListener;
 
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
+use Webmunkeez\ContextBundle\Token\TokenEncoderInterface;
 
 /**
  * @author Yannis Sgarra <hello@yannissgarra.com>
  */
 final class ContextResponseListener
 {
+    public function __construct(
+        private readonly TokenEncoderInterface $tokenEncoder,
+        private readonly string $ttl,
+    ) {
+    }
+
     public function onKernelResponse(ResponseEvent $event): void
     {
         if (false === $event->isMainRequest()) {
@@ -38,11 +45,11 @@ final class ContextResponseListener
 
                 $context = $request->attributes->get('context.'.$reference);
 
-                if (is_string($context)) {
+                if (is_array($context)) {
                     $response->headers->setCookie(
                         Cookie::create(str_replace('-', '_', $reference).'_context')
-                            ->withValue($context)
-                            ->withExpires(new \DateTimeImmutable('+1 year'))
+                            ->withValue($this->tokenEncoder->encode($context))
+                            ->withExpires(new \DateTimeImmutable('+'.$this->ttl))
                             ->withHttpOnly(true)
                             ->withSameSite(Cookie::SAMESITE_LAX),
                     );

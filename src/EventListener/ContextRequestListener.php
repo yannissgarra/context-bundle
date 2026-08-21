@@ -12,12 +12,18 @@ declare(strict_types=1);
 namespace Webmunkeez\ContextBundle\EventListener;
 
 use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Webmunkeez\ContextBundle\Token\TokenEncoderInterface;
 
 /**
  * @author Yannis Sgarra <hello@yannissgarra.com>
  */
 final class ContextRequestListener
 {
+    public function __construct(
+        private readonly TokenEncoderInterface $tokenEncoder,
+    ) {
+    }
+
     public function onKernelRequest(RequestEvent $event): void
     {
         $request = $event->getRequest();
@@ -26,7 +32,11 @@ final class ContextRequestListener
             if (str_ends_with($name, '_context')) {
                 $reference = substr($name, 0, -strlen('_context'));
 
-                $request->attributes->set('context.'.str_replace('_', '-', $reference), $value);
+                $payload = $this->tokenEncoder->decode($value);
+
+                if (null !== $payload) {
+                    $request->attributes->set('context.'.str_replace('_', '-', $reference), $payload);
+                }
             }
         }
     }

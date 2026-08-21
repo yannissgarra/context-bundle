@@ -13,12 +13,15 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use Webmunkeez\ContextBundle\EventListener\ContextRequestListener;
 use Webmunkeez\ContextBundle\EventListener\ContextResponseListener;
+use Webmunkeez\ContextBundle\Token\TokenEncoderInterface;
 
 return static function (ContainerConfigurator $container) {
     $container->services()
         ->set(ContextRequestListener::class)
+            ->args([service(TokenEncoderInterface::class)])
             ->tag('kernel.event_listener', ['event' => 'kernel.request'])
 
         ->set(ContextResponseListener::class)
+            ->args([service(TokenEncoderInterface::class), param('webmunkeez_context.ttl')])
             ->tag('kernel.event_listener', ['event' => 'kernel.response']);
 };

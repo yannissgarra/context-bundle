@@ -88,15 +88,29 @@ final class ProfileController
 }
 ```
 
-- `get(string $contextClass): ContextInterface` returns the context deserialized from the current request, or a fresh `new $contextClass()` if none was stored yet.
-- `update(ContextInterface $context): void` compares the given context's `getHash()` against the currently stored one and, only if it changed, marks it for persistence.
+- `get(string $contextClass): ContextInterface` denormalizes the context from the current request, or returns a fresh `new $contextClass()` if none was stored yet.
+- `update(ContextInterface $context): void` compares the given context's `getHash()` against the currently stored one and, only if it changed, normalizes it and marks it for persistence.
 
 ### How it's wired
 
 Two `kernel.event_listener`s do the actual cookie I/O so the rest of the request lifecycle only ever deals with request attributes:
 
-- `ContextRequestListener` (`kernel.request`) reads every cookie named `{reference}_context`, and copies its raw JSON value into the `context.{reference}` request attribute.
-- `ContextProvider::get()` lazily deserializes that attribute into the requested context class; `update()` re-serializes and flags `context.{reference}.refresh` as `true` only when the hash actually changed (write-on-change).
-- `ContextResponseListener` (`kernel.response`, main request only) looks for `context.{reference}.refresh === true` and, when found, writes the corresponding `{reference}_context` cookie (`HttpOnly`, `SameSite=Lax`, expires in one year) from the request attribute.
+- `ContextRequestListener` (`kernel.request`) reads every cookie named `{reference}_context`, verifies and decodes its JWT via `TokenEncoderInterface`, and copies the resulting array payload into the `context.{reference}` request attribute. A cookie that fails to decode — malformed, expired, or signed with a different secret — is silently ignored, exactly as if it had never been set.
+- `ContextProvider::get()` lazily denormalizes that attribute (a plain array, via Symfony's `NormalizerInterface`/`DenormalizerInterface`) into the requested context class; `update()` normalizes the context back to an array and flags `context.{reference}.refresh` as `true` only when the hash actually changed (write-on-change).
+- `ContextResponseListener` (`kernel.response`, main request only) looks for `context.{reference}.refresh === true` and, when found, encodes the array payload via `TokenEncoderInterface` and writes the result as the `{reference}_context` cookie (`HttpOnly`, `SameSite=Lax`, expiring after the configured `ttl`).
 
-There is no encryption or signing — the cookie payload is plain JSON, so don't store anything sensitive in a context.
+### Cookie signing
+
+`\Webmunkeez\ContextBundle\Token\TokenEncoderInterface` is a generic array-payload-to-string-token codec — it knows nothing about contexts. The cookie content is a JWT (backed by `\Webmunkeez\ContextBundle\Jwt\JwtTokenEncoder` and [firebase/php-jwt](https://github.com/firebase/php-jwt)), signed with HS256 and carrying an `exp` claim matching the cookie's lifetime. The context's normalized array is embedded directly as the `data` claim — not JSON-encoded twice — keeping the cookie as small as the data actually requires. This guarantees integrity — a tampered or forged cookie is rejected — but **not confidentiality**: the payload is base64url-encoded, not encrypted, so it's still readable by anyone with the cookie value. Don't store anything sensitive in a context.
+
+### Configuration
+
+```yaml
+# config/packages/webmunkeez_context.yaml
+webmunkeez_context:
+    secret: '%env(CONTEXT_SECRET)%' # defaults to kernel.secret
+    ttl: '1 year' # this is the default
+```
+
+- `secret` is the JWT signing key. It must be at least 32 characters long (HS256 requires a 256-bit key) or `JwtTokenEncoder::encode()` throws a `\DomainException`.
+- `ttl` is a relative date/time string (anything accepted by `strtotime('+'.$ttl)`, e.g. `'30 days'`, `'2 weeks'`) used both for the JWT's `exp` claim and the cookie's `Expires` attribute, so they always stay in sync.

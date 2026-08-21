@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Webmunkeez\ContextBundle\EventListener\ContextRequestListener;
+use Webmunkeez\ContextBundle\Token\TokenEncoderInterface;
 
 /**
  * @author Yannis Sgarra <hello@yannissgarra.com>
@@ -24,33 +25,58 @@ final class ContextRequestListenerTest extends TestCase
 {
     public function testOnKernelRequestWithMatchingCookieShouldSucceed(): void
     {
-        $request = new Request(cookies: ['profile_context' => '{"hash":"cached"}']);
+        $request = new Request(cookies: ['profile_context' => 'profile-token']);
 
-        $listener = new ContextRequestListener();
+        $tokenEncoder = $this->createMock(TokenEncoderInterface::class);
+        $tokenEncoder->method('decode')->with('profile-token')->willReturn(['hash' => 'cached']);
+
+        $listener = new ContextRequestListener($tokenEncoder);
         $listener->onKernelRequest(new RequestEvent($this->createMock(HttpKernelInterface::class), $request, HttpKernelInterface::MAIN_REQUEST));
 
-        $this->assertSame('{"hash":"cached"}', $request->attributes->get('context.profile'));
+        $this->assertSame(['hash' => 'cached'], $request->attributes->get('context.profile'));
     }
 
     public function testOnKernelRequestWithMultipleMatchingCookiesShouldSucceed(): void
     {
         $request = new Request(cookies: [
-            'profile_context' => '{"hash":"profile-hash"}',
-            'foo_bar_context' => '{"hash":"foo-bar-hash"}',
+            'profile_context' => 'profile-token',
+            'foo_bar_context' => 'foo-bar-token',
         ]);
 
-        $listener = new ContextRequestListener();
+        $tokenEncoder = $this->createMock(TokenEncoderInterface::class);
+        $tokenEncoder->method('decode')->willReturnMap([
+            ['profile-token', ['hash' => 'profile-hash']],
+            ['foo-bar-token', ['hash' => 'foo-bar-hash']],
+        ]);
+
+        $listener = new ContextRequestListener($tokenEncoder);
         $listener->onKernelRequest(new RequestEvent($this->createMock(HttpKernelInterface::class), $request, HttpKernelInterface::MAIN_REQUEST));
 
-        $this->assertSame('{"hash":"profile-hash"}', $request->attributes->get('context.profile'));
-        $this->assertSame('{"hash":"foo-bar-hash"}', $request->attributes->get('context.foo-bar'));
+        $this->assertSame(['hash' => 'profile-hash'], $request->attributes->get('context.profile'));
+        $this->assertSame(['hash' => 'foo-bar-hash'], $request->attributes->get('context.foo-bar'));
     }
 
     public function testOnKernelRequestWithoutMatchingCookieShouldFail(): void
     {
         $request = new Request(cookies: ['unrelated_cookie' => 'value']);
 
-        $listener = new ContextRequestListener();
+        $tokenEncoder = $this->createMock(TokenEncoderInterface::class);
+        $tokenEncoder->expects($this->never())->method('decode');
+
+        $listener = new ContextRequestListener($tokenEncoder);
+        $listener->onKernelRequest(new RequestEvent($this->createMock(HttpKernelInterface::class), $request, HttpKernelInterface::MAIN_REQUEST));
+
+        $this->assertSame([], $request->attributes->all());
+    }
+
+    public function testOnKernelRequestWithInvalidTokenShouldFail(): void
+    {
+        $request = new Request(cookies: ['profile_context' => 'tampered-token']);
+
+        $tokenEncoder = $this->createMock(TokenEncoderInterface::class);
+        $tokenEncoder->method('decode')->with('tampered-token')->willReturn(null);
+
+        $listener = new ContextRequestListener($tokenEncoder);
         $listener->onKernelRequest(new RequestEvent($this->createMock(HttpKernelInterface::class), $request, HttpKernelInterface::MAIN_REQUEST));
 
         $this->assertSame([], $request->attributes->all());

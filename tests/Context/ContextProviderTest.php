@@ -14,8 +14,7 @@ namespace Webmunkeez\ContextBundle\Test\Context;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
-use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Serializer;
 use Webmunkeez\ContextBundle\Context\ContextProvider;
 
 /**
@@ -28,8 +27,8 @@ final class ContextProviderTest extends TestCase
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getMainRequest')->willReturn(null);
 
-        $serializer = $this->createMock(SerializerInterface::class);
-        $serializer->expects($this->never())->method('deserialize');
+        $serializer = $this->createMock(Serializer::class);
+        $serializer->expects($this->never())->method('denormalize');
 
         $provider = new ContextProvider($requestStack, $serializer);
 
@@ -41,8 +40,8 @@ final class ContextProviderTest extends TestCase
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getMainRequest')->willReturn(new Request());
 
-        $serializer = $this->createMock(SerializerInterface::class);
-        $serializer->expects($this->never())->method('deserialize');
+        $serializer = $this->createMock(Serializer::class);
+        $serializer->expects($this->never())->method('denormalize');
 
         $provider = new ContextProvider($requestStack, $serializer);
 
@@ -52,17 +51,17 @@ final class ContextProviderTest extends TestCase
     public function testGetWithContextShouldSucceed(): void
     {
         $request = new Request();
-        $request->attributes->set('context.'.FooBarContext::getReference(), '{"hash":"cached"}');
+        $request->attributes->set('context.'.FooBarContext::getReference(), ['hash' => 'cached']);
 
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getMainRequest')->willReturn($request);
 
         $cachedContext = new FooBarContext('cached');
 
-        $serializer = $this->createMock(SerializerInterface::class);
+        $serializer = $this->createMock(Serializer::class);
         $serializer->expects($this->once())
-            ->method('deserialize')
-            ->with('{"hash":"cached"}', FooBarContext::class, JsonEncoder::FORMAT)
+            ->method('denormalize')
+            ->with(['hash' => 'cached'], FooBarContext::class)
             ->willReturn($cachedContext);
 
         $provider = new ContextProvider($requestStack, $serializer);
@@ -75,8 +74,8 @@ final class ContextProviderTest extends TestCase
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getMainRequest')->willReturn(null);
 
-        $serializer = $this->createMock(SerializerInterface::class);
-        $serializer->expects($this->never())->method('serialize');
+        $serializer = $this->createMock(Serializer::class);
+        $serializer->expects($this->never())->method('normalize');
 
         $provider = new ContextProvider($requestStack, $serializer);
 
@@ -90,8 +89,8 @@ final class ContextProviderTest extends TestCase
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getMainRequest')->willReturn($request);
 
-        $serializer = $this->createMock(SerializerInterface::class);
-        $serializer->expects($this->never())->method('serialize');
+        $serializer = $this->createMock(Serializer::class);
+        $serializer->expects($this->never())->method('normalize');
 
         $provider = new ContextProvider($requestStack, $serializer);
 
@@ -110,65 +109,65 @@ final class ContextProviderTest extends TestCase
 
         $context = new FooBarContext('new-hash');
 
-        $serializer = $this->createMock(SerializerInterface::class);
-        $serializer->method('serialize')
-            ->with($context, JsonEncoder::FORMAT)
-            ->willReturn('{"hash":"new-hash"}');
+        $serializer = $this->createMock(Serializer::class);
+        $serializer->method('normalize')
+            ->with($context)
+            ->willReturn(['hash' => 'new-hash']);
 
         $provider = new ContextProvider($requestStack, $serializer);
 
         $provider->update($context);
 
-        $this->assertSame('{"hash":"new-hash"}', $request->attributes->get('context.'.FooBarContext::getReference()));
+        $this->assertSame(['hash' => 'new-hash'], $request->attributes->get('context.'.FooBarContext::getReference()));
         $this->assertTrue($request->attributes->get('context.'.FooBarContext::getReference().'.refresh'));
     }
 
     public function testUpdateWithSameContextShouldFail(): void
     {
         $request = new Request();
-        $request->attributes->set('context.'.FooBarContext::getReference(), '{"hash":"same-hash"}');
+        $request->attributes->set('context.'.FooBarContext::getReference(), ['hash' => 'same-hash']);
 
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getMainRequest')->willReturn($request);
 
-        $serializer = $this->createMock(SerializerInterface::class);
-        $serializer->method('deserialize')
-            ->with('{"hash":"same-hash"}', FooBarContext::class, JsonEncoder::FORMAT)
+        $serializer = $this->createMock(Serializer::class);
+        $serializer->method('denormalize')
+            ->with(['hash' => 'same-hash'], FooBarContext::class)
             ->willReturn(new FooBarContext('same-hash'));
-        $serializer->expects($this->never())->method('serialize');
+        $serializer->expects($this->never())->method('normalize');
 
         $provider = new ContextProvider($requestStack, $serializer);
 
         $provider->update(new FooBarContext('same-hash'));
 
         // the cached value must be left untouched
-        $this->assertSame('{"hash":"same-hash"}', $request->attributes->get('context.'.FooBarContext::getReference()));
+        $this->assertSame(['hash' => 'same-hash'], $request->attributes->get('context.'.FooBarContext::getReference()));
         $this->assertFalse($request->attributes->has('context.'.FooBarContext::getReference().'.refresh'));
     }
 
     public function testUpdateWithUpdatedContextShouldSucceed(): void
     {
         $request = new Request();
-        $request->attributes->set('context.'.FooBarContext::getReference(), '{"hash":"old-hash"}');
+        $request->attributes->set('context.'.FooBarContext::getReference(), ['hash' => 'old-hash']);
 
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getMainRequest')->willReturn($request);
 
         $context = new FooBarContext('new-hash');
 
-        $serializer = $this->createMock(SerializerInterface::class);
-        $serializer->method('deserialize')
-            ->with('{"hash":"old-hash"}', FooBarContext::class, JsonEncoder::FORMAT)
+        $serializer = $this->createMock(Serializer::class);
+        $serializer->method('denormalize')
+            ->with(['hash' => 'old-hash'], FooBarContext::class)
             ->willReturn(new FooBarContext('old-hash'));
-        $serializer->method('serialize')
-            ->with($context, JsonEncoder::FORMAT)
-            ->willReturn('{"hash":"new-hash"}');
+        $serializer->method('normalize')
+            ->with($context)
+            ->willReturn(['hash' => 'new-hash']);
 
         $provider = new ContextProvider($requestStack, $serializer);
 
         $provider->update($context);
 
-        $this->assertSame('{"hash":"new-hash"}', $request->attributes->get('context.'.FooBarContext::getReference()));
+        $this->assertSame(['hash' => 'new-hash'], $request->attributes->get('context.'.FooBarContext::getReference()));
         $this->assertTrue($request->attributes->get('context.'.FooBarContext::getReference().'.refresh'));
     }
 }

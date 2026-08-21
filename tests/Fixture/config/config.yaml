@@ -1,5 +1,6 @@
 framework:
-    secret: test
+    # long enough for the HS256 key generated from it in webmunkeez_context's default config
+    secret: '0123456789abcdef0123456789abcdef'
     handle_all_throwables: true
     http_method_override: false
     test: true
@@ -7,3 +8,6 @@ framework:
 
     php_errors:
         log: true
+
+    property_info:
+        with_constructor_extractor: false
