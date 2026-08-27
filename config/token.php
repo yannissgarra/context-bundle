@@ -11,13 +11,13 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
-use Webmunkeez\ContextBundle\Jwt\JwtTokenEncoder;
-use Webmunkeez\ContextBundle\Token\TokenEncoderInterface;
+use Webmunkeez\ContextBundle\Jwt\ContextJwtTokenEncoder;
+use Webmunkeez\ContextBundle\Token\ContextTokenEncoderInterface;
 
 return static function (ContainerConfigurator $container) {
     $container->services()
-        ->set(JwtTokenEncoder::class)
-            ->args([param('webmunkeez_context.secret'), param('webmunkeez_context.ttl')])
+        ->set(ContextJwtTokenEncoder::class)
+            ->args([param('webmunkeez_context.secret')])
 
-        ->alias(TokenEncoderInterface::class, JwtTokenEncoder::class);
+        ->alias(ContextTokenEncoderInterface::class, ContextJwtTokenEncoder::class);
 };

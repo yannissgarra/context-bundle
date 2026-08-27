@@ -27,8 +27,6 @@ final class ConfigurationTest extends TestCase
 
         $this->assertSame([
             'secret' => '%kernel.secret%',
-            'ttl' => '1 year',
-            'refresh_after' => '1 day',
         ], $processedConfig);
     }
 
@@ -47,69 +45,6 @@ final class ConfigurationTest extends TestCase
 
         (new Processor())->processConfiguration(new Configuration(), [
             'webmunkeez_context' => ['secret' => ''],
-        ]);
-    }
-
-    public function testProcessWithCustomTtlShouldSucceed(): void
-    {
-        $processedConfig = (new Processor())->processConfiguration(new Configuration(), [
-            'webmunkeez_context' => ['ttl' => '30 days'],
-        ]);
-
-        $this->assertSame('30 days', $processedConfig['ttl']);
-    }
-
-    public function testProcessWithEmptyTtlShouldThrowException(): void
-    {
-        $this->expectException(InvalidConfigurationException::class);
-
-        (new Processor())->processConfiguration(new Configuration(), [
-            'webmunkeez_context' => ['ttl' => ''],
-        ]);
-    }
-
-    public function testProcessWithInvalidTtlShouldThrowException(): void
-    {
-        $this->expectException(InvalidConfigurationException::class);
-
-        (new Processor())->processConfiguration(new Configuration(), [
-            'webmunkeez_context' => ['ttl' => 'not a duration'],
-        ]);
-    }
-
-    public function testProcessWithCustomRefreshAfterShouldSucceed(): void
-    {
-        $processedConfig = (new Processor())->processConfiguration(new Configuration(), [
-            'webmunkeez_context' => ['refresh_after' => '2 hours'],
-        ]);
-
-        $this->assertSame('2 hours', $processedConfig['refresh_after']);
-    }
-
-    public function testProcessWithEmptyRefreshAfterShouldThrowException(): void
-    {
-        $this->expectException(InvalidConfigurationException::class);
-
-        (new Processor())->processConfiguration(new Configuration(), [
-            'webmunkeez_context' => ['refresh_after' => ''],
-        ]);
-    }
-
-    public function testProcessWithInvalidRefreshAfterShouldThrowException(): void
-    {
-        $this->expectException(InvalidConfigurationException::class);
-
-        (new Processor())->processConfiguration(new Configuration(), [
-            'webmunkeez_context' => ['refresh_after' => 'not a duration'],
-        ]);
-    }
-
-    public function testProcessWithRefreshAfterLongerThanTtlShouldThrowException(): void
-    {
-        $this->expectException(InvalidConfigurationException::class);
-
-        (new Processor())->processConfiguration(new Configuration(), [
-            'webmunkeez_context' => ['ttl' => '1 day', 'refresh_after' => '1 day'],
         ]);
     }
 }

@@ -12,7 +12,8 @@ declare(strict_types=1);
 namespace Webmunkeez\ContextBundle\EventListener;
 
 use Symfony\Component\HttpKernel\Event\RequestEvent;
-use Webmunkeez\ContextBundle\Token\TokenEncoderInterface;
+use Webmunkeez\ContextBundle\Exception\ContextClassNotFoundException;
+use Webmunkeez\ContextBundle\Token\ContextTokenEncoderInterface;
 
 /**
  * @author Yannis Sgarra <hello@yannissgarra.com>
@@ -20,8 +21,7 @@ use Webmunkeez\ContextBundle\Token\TokenEncoderInterface;
 final class ContextRequestListener
 {
     public function __construct(
-        private readonly TokenEncoderInterface $tokenEncoder,
-        private readonly string $refreshAfter,
+        private readonly ContextTokenEncoderInterface $tokenEncoder,
     ) {
     }
 
@@ -37,14 +37,19 @@ final class ContextRequestListener
             if (str_ends_with($name, '_context')) {
                 $reference = str_replace('_', '-', substr($name, 0, -strlen('_context')));
 
-                $payload = $this->tokenEncoder->decode($value);
+                try {
+                    $contextToken = $this->tokenEncoder->decode($value);
+                } catch (ContextClassNotFoundException) {
+                    $request->attributes->set('context.'.$reference.'.delete', true);
 
-                if (null !== $payload) {
-                    $request->attributes->set('context.'.$reference, $payload);
+                    continue;
+                }
 
-                    $issuedAt = $this->tokenEncoder->getIssuedAt($value);
+                if (null !== $contextToken) {
+                    $request->attributes->set('context.'.$reference, $contextToken->getPayload());
+                    $request->attributes->set('context.'.$reference.'.class', $contextToken->getContextClass());
 
-                    if (null !== $issuedAt && $issuedAt <= new \DateTimeImmutable('-'.$this->refreshAfter)) {
+                    if ($contextToken->getIssuedAt() <= new \DateTimeImmutable('-'.$contextToken->getContextClass()::getRefreshAfter())) {
                         $request->attributes->set('context.'.$reference.'.refresh', true);
                     }
                 }

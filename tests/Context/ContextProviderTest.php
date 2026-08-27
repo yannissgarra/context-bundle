@@ -119,6 +119,7 @@ final class ContextProviderTest extends TestCase
         $provider->update($context);
 
         $this->assertSame(['hash' => 'new-hash'], $request->attributes->get('context.'.FooBarContext::getReference()));
+        $this->assertSame(FooBarContext::class, $request->attributes->get('context.'.FooBarContext::getReference().'.class'));
         $this->assertTrue($request->attributes->get('context.'.FooBarContext::getReference().'.refresh'));
     }
 
@@ -168,6 +169,7 @@ final class ContextProviderTest extends TestCase
         $provider->update($context);
 
         $this->assertSame(['hash' => 'new-hash'], $request->attributes->get('context.'.FooBarContext::getReference()));
+        $this->assertSame(FooBarContext::class, $request->attributes->get('context.'.FooBarContext::getReference().'.class'));
         $this->assertTrue($request->attributes->get('context.'.FooBarContext::getReference().'.refresh'));
     }
 }

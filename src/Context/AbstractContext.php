@@ -30,4 +30,16 @@ abstract class AbstractContext implements ContextInterface
 
         return (new UnicodeString($shortName))->kebab()->toString();
     }
+
+    #[Ignore]
+    public static function getTtl(): string
+    {
+        return '1 year';
+    }
+
+    #[Ignore]
+    public static function getRefreshAfter(): string
+    {
+        return '1 day';
+    }
 }

@@ -27,4 +27,24 @@ final class AbstractContextTest extends TestCase
     {
         $this->assertSame('foo-bar', FooBar::getReference());
     }
+
+    public function testGetTtlShouldReturnDefaultValue(): void
+    {
+        $this->assertSame('1 year', FooBarContext::getTtl());
+    }
+
+    public function testGetRefreshAfterShouldReturnDefaultValue(): void
+    {
+        $this->assertSame('1 day', FooBarContext::getRefreshAfter());
+    }
+
+    public function testGetTtlShouldBeOverridable(): void
+    {
+        $this->assertSame('30 days', CustomTtlContext::getTtl());
+    }
+
+    public function testGetRefreshAfterShouldBeOverridable(): void
+    {
+        $this->assertSame('2 hours', CustomTtlContext::getRefreshAfter());
+    }
 }

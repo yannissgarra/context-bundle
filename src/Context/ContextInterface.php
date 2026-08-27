@@ -17,4 +17,14 @@ namespace Webmunkeez\ContextBundle\Context;
 interface ContextInterface extends ContextItemInterface
 {
     public static function getReference(): string;
+
+    /**
+     * How long the cookie/JWT stays valid, as a relative date/time string (e.g. '30 days', anything accepted by strtotime('+'.$ttl)).
+     */
+    public static function getTtl(): string;
+
+    /**
+     * Past this age, the cookie/JWT is silently reissued on the next request, sliding it back within getTtl() of expiry. Must resolve to a shorter duration than getTtl().
+     */
+    public static function getRefreshAfter(): string;
 }

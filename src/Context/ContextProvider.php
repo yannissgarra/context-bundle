@@ -49,6 +49,7 @@ final class ContextProvider implements ContextProviderInterface
             && $this->get($context::class)->getHash() !== $context->getHash()
         ) {
             $request->attributes->set('context.'.$context::getReference(), $this->serializer->normalize($context));
+            $request->attributes->set('context.'.$context::getReference().'.class', $context::class);
             $request->attributes->set('context.'.$context::getReference().'.refresh', true);
         }
     }
