@@ -49,7 +49,9 @@ final class ContextRequestListener
                     $request->attributes->set('context.'.$reference, $contextToken->getPayload());
                     $request->attributes->set('context.'.$reference.'.class', $contextToken->getContextClass());
 
-                    if ($contextToken->getIssuedAt() <= new \DateTimeImmutable('-'.$contextToken->getContextClass()::getRefreshAfter())) {
+                    $refreshAfterTimestamp = strtotime('-'.$contextToken->getContextClass()::getRefreshAfter());
+
+                    if (false !== $refreshAfterTimestamp && $contextToken->getIssuedAt()->getTimestamp() <= $refreshAfterTimestamp) {
                         $request->attributes->set('context.'.$reference.'.refresh', true);
                     }
                 }

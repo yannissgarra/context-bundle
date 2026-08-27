@@ -19,6 +19,7 @@ use Webmunkeez\ContextBundle\EventListener\ContextRequestListener;
 use Webmunkeez\ContextBundle\Exception\ContextClassNotFoundException;
 use Webmunkeez\ContextBundle\Test\Context\CustomTtlContext;
 use Webmunkeez\ContextBundle\Test\Context\FooBarContext;
+use Webmunkeez\ContextBundle\Test\Context\UnparseableRefreshAfterContext;
 use Webmunkeez\ContextBundle\Token\ContextToken;
 use Webmunkeez\ContextBundle\Token\ContextTokenEncoderInterface;
 
@@ -162,5 +163,21 @@ final class ContextRequestListenerTest extends TestCase
 
         $this->assertTrue($request->attributes->get('context.profile.delete'));
         $this->assertFalse($request->attributes->has('context.profile'));
+    }
+
+    public function testOnKernelRequestWithUnparseableRefreshAfterShouldNotThrowOrSetRefreshFlag(): void
+    {
+        $request = new Request(cookies: ['unparseable_refresh_after_context' => 'token']);
+
+        $tokenEncoder = $this->createMock(ContextTokenEncoderInterface::class);
+        $tokenEncoder->method('decode')->with('token')->willReturn(
+            new ContextToken(['hash' => 'cached'], new \DateTimeImmutable('-2 days'), UnparseableRefreshAfterContext::class),
+        );
+
+        $listener = new ContextRequestListener($tokenEncoder);
+        $listener->onKernelRequest(new RequestEvent($this->createMock(HttpKernelInterface::class), $request, HttpKernelInterface::MAIN_REQUEST));
+
+        $this->assertSame(['hash' => 'cached'], $request->attributes->get('context.unparseable-refresh-after'));
+        $this->assertFalse($request->attributes->has('context.unparseable-refresh-after.refresh'));
     }
 }

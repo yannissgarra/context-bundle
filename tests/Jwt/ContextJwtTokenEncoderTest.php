@@ -19,6 +19,8 @@ use Webmunkeez\ContextBundle\Jwt\ContextJwtTokenEncoder;
 use Webmunkeez\ContextBundle\Test\Context\CustomTtlContext;
 use Webmunkeez\ContextBundle\Test\Context\FooBarContext;
 use Webmunkeez\ContextBundle\Test\Context\InvalidTtlContext;
+use Webmunkeez\ContextBundle\Test\Context\UnparseableRefreshAfterContext;
+use Webmunkeez\ContextBundle\Test\Context\UnparseableTtlContext;
 
 /**
  * @author Yannis Sgarra <hello@yannissgarra.com>
@@ -73,6 +75,23 @@ final class ContextJwtTokenEncoderTest extends TestCase
         $this->expectException(\DomainException::class);
 
         (new ContextJwtTokenEncoder(self::SECRET))->encode(['hash' => 'cached'], InvalidTtlContext::class);
+    }
+
+    public function testEncodeWithUnparseableTtlShouldThrowException(): void
+    {
+        $this->expectException(\DomainException::class);
+
+        (new ContextJwtTokenEncoder(self::SECRET))->encode(['hash' => 'cached'], UnparseableTtlContext::class);
+    }
+
+    public function testEncodeWithUnparseableRefreshAfterShouldThrowException(): void
+    {
+        // regression: strtotime('not a duration') returns false, and false >= <a real timestamp>
+        // used to evaluate to false (bool/int loose comparison), silently letting a garbage
+        // getRefreshAfter() through instead of raising a clear DomainException
+        $this->expectException(\DomainException::class);
+
+        (new ContextJwtTokenEncoder(self::SECRET))->encode(['hash' => 'cached'], UnparseableRefreshAfterContext::class);
     }
 
     public function testDecodeWithWrongSecretShouldFail(): void

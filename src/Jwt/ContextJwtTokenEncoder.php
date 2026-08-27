@@ -35,13 +35,16 @@ final class ContextJwtTokenEncoder implements ContextTokenEncoderInterface
         $ttl = $contextClass::getTtl();
         $refreshAfter = $contextClass::getRefreshAfter();
 
-        if (strtotime('+'.$refreshAfter) >= strtotime('+'.$ttl)) {
-            throw new \DomainException(sprintf('%s::getRefreshAfter() must return a shorter duration than %s::getTtl().', $contextClass, $contextClass));
+        $ttlTimestamp = strtotime('+'.$ttl);
+        $refreshAfterTimestamp = strtotime('+'.$refreshAfter);
+
+        if (false === $ttlTimestamp || false === $refreshAfterTimestamp || $refreshAfterTimestamp >= $ttlTimestamp) {
+            throw new \DomainException(sprintf('%s::getTtl() and %s::getRefreshAfter() must both be valid relative date/time strings, with getRefreshAfter() shorter than getTtl().', $contextClass, $contextClass));
         }
 
         return JWT::encode([
             'iat' => (new \DateTimeImmutable())->getTimestamp(),
-            'exp' => (new \DateTimeImmutable('+'.$ttl))->getTimestamp(),
+            'exp' => $ttlTimestamp,
             'ctx' => $contextClass,
             'data' => $payload,
         ], $this->secret, self::ALGORITHM);
