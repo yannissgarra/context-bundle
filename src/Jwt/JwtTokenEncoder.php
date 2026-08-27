@@ -31,6 +31,7 @@ final class JwtTokenEncoder implements TokenEncoderInterface
     public function encode(array $payload): string
     {
         return JWT::encode([
+            'iat' => (new \DateTimeImmutable())->getTimestamp(),
             'exp' => (new \DateTimeImmutable('+'.$this->ttl))->getTimestamp(),
             'data' => $payload,
         ], $this->secret, self::ALGORITHM);
@@ -38,13 +39,9 @@ final class JwtTokenEncoder implements TokenEncoderInterface
 
     public function decode(string $token): ?array
     {
-        try {
-            $claims = JWT::decode($token, new Key($this->secret, self::ALGORITHM));
-        } catch (\UnexpectedValueException) {
-            return null;
-        }
+        $claims = $this->decodeClaims($token);
 
-        if (false === isset($claims->data)) {
+        if (null === $claims || false === isset($claims->data)) {
             return null;
         }
 
@@ -52,5 +49,25 @@ final class JwtTokenEncoder implements TokenEncoderInterface
         $data = json_decode((string) json_encode($claims->data), true);
 
         return is_array($data) ? $data : null;
+    }
+
+    public function getIssuedAt(string $token): ?\DateTimeImmutable
+    {
+        $claims = $this->decodeClaims($token);
+
+        if (null === $claims || false === isset($claims->iat)) {
+            return null;
+        }
+
+        return (new \DateTimeImmutable())->setTimestamp((int) $claims->iat);
+    }
+
+    private function decodeClaims(string $token): ?\stdClass
+    {
+        try {
+            return JWT::decode($token, new Key($this->secret, self::ALGORITHM));
+        } catch (\UnexpectedValueException) {
+            return null;
+        }
     }
 }

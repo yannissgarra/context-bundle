@@ -107,4 +107,35 @@ final class JwtTokenEncoderTest extends TestCase
 
         $this->assertNull((new JwtTokenEncoder(self::SECRET, self::TTL))->decode($token));
     }
+
+    public function testGetIssuedAtShouldSucceed(): void
+    {
+        $encoder = new JwtTokenEncoder(self::SECRET, self::TTL);
+
+        $token = $encoder->encode(['hash' => 'cached']);
+
+        $issuedAt = $encoder->getIssuedAt($token);
+
+        $this->assertNotNull($issuedAt);
+        $this->assertLessThanOrEqual(2, abs($issuedAt->getTimestamp() - time()));
+    }
+
+    public function testGetIssuedAtWithWrongSecretShouldFail(): void
+    {
+        $token = (new JwtTokenEncoder(self::SECRET, self::TTL))->encode(['hash' => 'cached']);
+
+        $this->assertNull((new JwtTokenEncoder(self::OTHER_SECRET, self::TTL))->getIssuedAt($token));
+    }
+
+    public function testGetIssuedAtWithMalformedTokenShouldFail(): void
+    {
+        $this->assertNull((new JwtTokenEncoder(self::SECRET, self::TTL))->getIssuedAt('not-a-jwt'));
+    }
+
+    public function testGetIssuedAtWithoutIatClaimShouldFail(): void
+    {
+        $token = JWT::encode(['exp' => time() + 10, 'data' => ['hash' => 'cached']], self::SECRET, 'HS256');
+
+        $this->assertNull((new JwtTokenEncoder(self::SECRET, self::TTL))->getIssuedAt($token));
+    }
 }

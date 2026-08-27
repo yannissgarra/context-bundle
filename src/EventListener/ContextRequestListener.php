@@ -21,6 +21,7 @@ final class ContextRequestListener
 {
     public function __construct(
         private readonly TokenEncoderInterface $tokenEncoder,
+        private readonly string $refreshAfter,
     ) {
     }
 
@@ -34,12 +35,18 @@ final class ContextRequestListener
 
         foreach ($request->cookies->all() as $name => $value) {
             if (str_ends_with($name, '_context')) {
-                $reference = substr($name, 0, -strlen('_context'));
+                $reference = str_replace('_', '-', substr($name, 0, -strlen('_context')));
 
                 $payload = $this->tokenEncoder->decode($value);
 
                 if (null !== $payload) {
-                    $request->attributes->set('context.'.str_replace('_', '-', $reference), $payload);
+                    $request->attributes->set('context.'.$reference, $payload);
+
+                    $issuedAt = $this->tokenEncoder->getIssuedAt($value);
+
+                    if (null !== $issuedAt && $issuedAt <= new \DateTimeImmutable('-'.$this->refreshAfter)) {
+                        $request->attributes->set('context.'.$reference.'.refresh', true);
+                    }
                 }
             }
         }

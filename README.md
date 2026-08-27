@@ -95,9 +95,9 @@ final class ProfileController
 
 Two `kernel.event_listener`s do the actual cookie I/O so the rest of the request lifecycle only ever deals with request attributes:
 
-- `ContextRequestListener` (`kernel.request`) reads every cookie named `{reference}_context`, verifies and decodes its JWT via `TokenEncoderInterface`, and copies the resulting array payload into the `context.{reference}` request attribute. A cookie that fails to decode — malformed, expired, or signed with a different secret — is silently ignored, exactly as if it had never been set.
+- `ContextRequestListener` (`kernel.request`) reads every cookie named `{reference}_context`, verifies and decodes its JWT via `TokenEncoderInterface`, and copies the resulting array payload into the `context.{reference}` request attribute. A cookie that fails to decode — malformed, expired, or signed with a different secret — is silently ignored, exactly as if it had never been set. It also flags `context.{reference}.refresh` as `true` when the token's `iat` (issuance time) is older than the configured `refresh_after` — sliding the cookie/JWT's lifetime forward for active visitors without re-signing on every single request.
 - `ContextProvider::get()` lazily denormalizes that attribute (a plain array, via Symfony's `NormalizerInterface`/`DenormalizerInterface`) into the requested context class; `update()` normalizes the context back to an array and flags `context.{reference}.refresh` as `true` only when the hash actually changed (write-on-change).
-- `ContextResponseListener` (`kernel.response`, main request only) looks for `context.{reference}.refresh === true` and, when found, encodes the array payload via `TokenEncoderInterface` and writes the result as the `{reference}_context` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when the request itself is HTTPS, expiring after the configured `ttl`).
+- `ContextResponseListener` (`kernel.response`, main request only) looks for `context.{reference}.refresh === true` and, when found, encodes the array payload via `TokenEncoderInterface` and writes the result as the `{reference}_context` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when the request itself is HTTPS, expiring after the configured `ttl`). Since this re-encodes the payload from scratch, the JWT and the cookie are always refreshed together — a new `iat`/`exp` on the token, a new `Expires` on the cookie — whichever of the two flags triggered it.
 
 ### Cookie signing
 
@@ -110,7 +110,9 @@ Two `kernel.event_listener`s do the actual cookie I/O so the rest of the request
 webmunkeez_context:
     secret: '%env(CONTEXT_SECRET)%' # defaults to kernel.secret
     ttl: '1 year' # this is the default
+    refresh_after: '1 day' # this is the default
 ```
 
 - `secret` is the JWT signing key. It must be at least 32 characters long (HS256 requires a 256-bit key) or `JwtTokenEncoder::encode()` throws a `\DomainException`.
 - `ttl` is a relative date/time string (anything accepted by `strtotime('+'.$ttl)`, e.g. `'30 days'`, `'2 weeks'`) used both for the JWT's `exp` claim and the cookie's `Expires` attribute, so they always stay in sync.
+- `refresh_after` is the same kind of relative date/time string, and must resolve to a shorter duration than `ttl` (rejected otherwise). Past this age, `ContextRequestListener` re-issues the cookie/JWT on the next request even though nothing in the context itself changed — keeping active visitors permanently within `ttl` of expiry while a visitor who never comes back still expires normally.

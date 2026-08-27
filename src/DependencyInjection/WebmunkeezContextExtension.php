@@ -28,6 +28,7 @@ final class WebmunkeezContextExtension extends Extension
 
         $container->setParameter('webmunkeez_context.secret', $config['secret']);
         $container->setParameter('webmunkeez_context.ttl', $config['ttl']);
+        $container->setParameter('webmunkeez_context.refresh_after', $config['refresh_after']);
 
         $loader = new PhpFileLoader($container, new FileLocator(__DIR__.'/../../config'), $container->getParameter('kernel.environment'));
         $loader->load('context.php');

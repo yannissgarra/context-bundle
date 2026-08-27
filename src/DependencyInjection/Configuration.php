@@ -37,6 +37,18 @@ final class Configuration implements ConfigurationInterface
                             ->thenInvalid('Invalid ttl %s')
                     ->end()
                 ->end()
+                ->scalarNode('refresh_after')
+                    ->cannotBeEmpty()
+                    ->defaultValue('1 day')
+                    ->validate()
+                        ->ifTrue(fn (string $refreshAfter): bool => false === strtotime('+'.$refreshAfter))
+                            ->thenInvalid('Invalid refresh_after %s')
+                    ->end()
+                ->end()
+            ->end()
+            ->validate()
+                ->ifTrue(fn (array $config): bool => strtotime('+'.$config['refresh_after']) >= strtotime('+'.$config['ttl']))
+                    ->thenInvalid('refresh_after must be shorter than ttl')
             ->end();
 
         return $treeBuilder;

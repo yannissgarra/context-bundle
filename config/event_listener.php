@@ -18,7 +18,7 @@ use Webmunkeez\ContextBundle\Token\TokenEncoderInterface;
 return static function (ContainerConfigurator $container) {
     $container->services()
         ->set(ContextRequestListener::class)
-            ->args([service(TokenEncoderInterface::class)])
+            ->args([service(TokenEncoderInterface::class), param('webmunkeez_context.refresh_after')])
             ->tag('kernel.event_listener', ['event' => 'kernel.request'])
 
         ->set(ContextResponseListener::class)
